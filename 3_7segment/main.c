@@ -1,5 +1,26 @@
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
+
+int counter = 0;
+uint8_t nums[4] = {0,0,0,0};
+ISR(TIMER0_COMP_vect) {
+    ++counter;
+    if (counter > 1000) {
+        counter = 0;
+        uint8_t iter;
+        for(iter = 3; iter >= 0; --iter) {
+            if (nums[iter] < 9) {
+                ++nums[iter];
+                break;
+            } else {
+                nums[iter] = 0;
+            }
+        }
+    } else {
+        ++counter;
+    }
+}
 
 inline
 void init()
@@ -45,6 +66,7 @@ inline void display_num(uint8_t num)
 int main(void)
 {
     init();
+
     bvs[0] = 0b00111111;
     bvs[1] = 0b00000110;
     bvs[2] = 0b01011011;
@@ -56,7 +78,12 @@ int main(void)
     bvs[8] = 0b01111111;
     bvs[9] = 0b01101111;
 
-    PORTD = ~_BV(PD0); // select first display
-    select_display(0);
+    while(1) {
+        uint8_t iter;
+        for (iter = 0; iter < 4; ++iter) {
+            select_display(iter);
+            display_num(nums[iter]);
+            _delay_ms(1);
+        }
+    }
 }
-
