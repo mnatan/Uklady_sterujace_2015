@@ -2,10 +2,17 @@
 #include <util/delay.h>
 
 inline
-void init_gpio()
+void init()
 {
     DDRB = 0xFF; // choose segment
     DDRD = 0xFF; // choose display
+
+    // timer
+    OCR0 = 250;
+    TCCR0 |= _BV(WGM01); // choose CTC mode
+    TCCR0 |= _BV(CS01) | _BV(CS00); // 64 prescaler
+    TIMSK |= _BV(OCIE0);
+    sei();
 }
 
 inline uint8_t bin_shift (uint8_t in, uint8_t shift)
@@ -37,7 +44,7 @@ inline void display_num(uint8_t num)
 
 int main(void)
 {
-    init_gpio();
+    init();
     bvs[0] = 0b00111111;
     bvs[1] = 0b00000110;
     bvs[2] = 0b01011011;
