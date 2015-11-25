@@ -41,31 +41,15 @@ int main(void)
     bvs[0] = 0b00111111;
     bvs[1] = 0b00000110;
     bvs[2] = 0b01011011;
-    bvs[3] = 0b00101111;
+    bvs[3] = 0b01001111;
     bvs[4] = 0b01100110;
-    bvs[5] = 0b00101101;
-    bvs[6] = 0b00111101;
+    bvs[5] = 0b01101101;
+    bvs[6] = 0b01111101;
     bvs[7] = 0b00000111;
     bvs[8] = 0b01111111;
+    bvs[9] = 0b01101111;
 
     PORTD = ~_BV(PD0); // select first display
     select_display(0);
-    uint8_t i;
-    while (1) {
-        for (i = 0; i < 9; ++i) {
-            display_num(i);
-            _delay_ms(400);
-        }
-    }
-
-    /*while (1) {*/
-    /*uint8_t iter;*/
-    /*segments_all_on();*/
-    /*_delay_ms(200);*/
-    /*for (iter = 0; iter < 8; ++iter) {*/
-    /*segment_off(iter);*/
-    /*_delay_ms(200);*/
-    /*}*/
-    /*}*/
 }
 
