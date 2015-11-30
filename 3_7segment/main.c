@@ -5,7 +5,6 @@
 int counter = 0;
 uint8_t nums[4] = {0,0,0,0};
 ISR(TIMER0_COMP_vect) {
-    ++counter;
     if (counter > 1000) {
         counter = 0;
         uint8_t iter;
