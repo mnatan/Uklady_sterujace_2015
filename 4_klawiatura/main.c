@@ -4,13 +4,12 @@
 
 uint8_t nums[4] = {0,0,0,0};
 ISR(TIMER0_COMP_vect) {
-    check_button();
 }
 
 inline
 void init()
 {
-    DDRA = 0xFF; // keyboard
+    DDRA = 0xFF; // klawiatura
     DDRB = 0xFF; // choose segment
     DDRD = 0xFF; // choose display
 
@@ -22,15 +21,38 @@ void init()
     sei();
 }
 
-inline void check_button(){
-    DDRA = 0x0F;
-    PORTA = 0xF0;
-    uint8_t row = ((~PORTA) & 0xF0) >> 4;
+inline uint8_t matrix_index(uint8_t num){
+    num &= 0x0F;
+    switch(num){
+        case 0:
+        case 1:
+        case 2:
+            return num;
+        case 4:
+            return 3;
+        case 8:
+            return 4;
+    }
+}
+
+void check_button(){
     DDRA = 0xF0;
     PORTA = 0x0F;
-    uint8_t column = (~PORTA) & 0x0F;
- 
+    _delay_us(20);
+    uint8_t row = matrix_index((~PINA) >> 4);
+
+    DDRA = 0x0F;
+    PORTA = 0xF0;
+    _delay_us(20);
+    uint8_t column = matrix_index(~PINA);
     
+    uint8_t button = row*column;
+
+    nums[2] = (button/10) % 10;
+    nums[3] = (button) % 10;
+    /*for (iter = 0; iter < 4; ++iter) {*/
+        
+    /*}*/
 }
 
 inline uint8_t bin_shift (uint8_t in, uint8_t shift)
