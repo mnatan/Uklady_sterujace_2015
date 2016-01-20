@@ -30,6 +30,7 @@ state game_state;
 state_of_menu menu_state;
 line menu_position;
 uint8_t time_setting;
+uint8_t button_delay;
 
 // text for LCD display
 char upper_line[16] = "hue hue";
@@ -75,6 +76,8 @@ ISR(TIMER0_COMP_vect) {
                 break;
         }
     } else {
+        if (!(counter % 400))
+            button_delay = 0;
         ++counter;
     }
 }
@@ -165,14 +168,25 @@ void refresh_LCD() {
 
 inline
 button get_button() {
-    if ( ~PINC & (1 << PC0) )
+    if (button_delay == 1)
+        return NONE;
+
+    if ( ~PINC & (1 << PC0) ) {
+        button_delay = 1;
         return LEFT;
-    if ( ~PINC & (1 << PC1) )
+    }
+    if ( ~PINC & (1 << PC1) ) {
+        button_delay = 1;
         return ENTER;
-    if ( ~PINC & (1 << PC2) )
+    }
+    if ( ~PINC & (1 << PC2) ) {
+        button_delay = 1;
         return RIGHT;
-    if ( ~PINC & (1 << PC3) )
+    }
+    if ( ~PINC & (1 << PC3) ) {
+        button_delay = 1;
         return ESCAPE;
+    }
     return NONE;
 }
 
