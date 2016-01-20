@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include <stdio.h>
 #include "HD44780.c"
 
 /*
@@ -16,10 +17,19 @@
 typedef enum {STOP, INCREMENT, DECREMENT} mode;
 typedef enum {LEFT, RIGHT, ENTER, ESCAPE, NONE} button;
 typedef enum {UPPER, LOWER} line;
-mode ss_mode = DECREMENT;
+typedef enum {MENU, GAME} state;
+typedef enum {MAIN, SETTINGS} state_of_menu; // lol
+typedef void (*void_ptr)();
+
+mode ss_mode = INCREMENT;
 int counter = 0; // time counter
 uint8_t nums[4] = {9,9,9,9}; // currently displayed number for 7-segment
 uint8_t bvs[10]; // number definitions
+
+state game_state;
+state_of_menu menu_state;
+line menu_position;
+uint8_t time_setting;
 
 // text for LCD display
 char upper_line[16] = "hue hue";
@@ -136,6 +146,7 @@ void refresh_7seg() {
         display_num(nums[iter]);
         _delay_ms(1);
     }
+    select_display(5); // dafuq
 }
 
 inline
@@ -148,7 +159,8 @@ void refresh_LCD() {
     LCD_Text("                ");
     LCD_GoToXY(0, 1);
     LCD_Text(lower_line);
-    LCD_Home();
+    /*LCD_Home();*/
+    LCD_GoToXY(0, menu_position);
 }
 
 inline
@@ -164,25 +176,113 @@ button get_button() {
     return NONE;
 }
 
+
+void display_game() {}
+
+void game_left() {
+
+}
+void game_right() {
+
+}
+void game_enter() {
+
+}
+void game_escape() {
+
+}
+
+void set_countdown() {
+    ss_mode = ++ss_mode % 3;
+}
+
+void set_time() {
+    time_setting = (time_setting + 10) % 60;
+}
+
+void display_menu() {
+    switch (menu_state) {
+        case MAIN:
+            strcpy(upper_line, " Start game");
+            strcpy(lower_line, " Settings");
+            break;
+        case SETTINGS:
+            /*strcpy(upper_line, " Game mode ");*/
+            switch (ss_mode) {
+                case STOP:
+                    strcpy(upper_line, " Game mode: STOP");
+                    break;
+                case INCREMENT:
+                    strcpy(upper_line, " Game mode: INC");
+                    break;
+                case DECREMENT:
+                    strcpy(upper_line, " Game mode: DEC");
+                    break;
+            }
+            sprintf(lower_line, " Time: %d", time_setting);
+            break;
+    }
+}
+void menu_left() { menu_position = UPPER; }
+void menu_right() { menu_position = LOWER; }
+
+void menu_enter() {
+    if (menu_state == MAIN) {
+        if (menu_position == UPPER) {
+            game_state = GAME;
+        } else if (menu_position == LOWER) {
+            menu_state = SETTINGS;
+        }
+    } else if (menu_state = SETTINGS) {
+        if (menu_position == UPPER) {
+            set_countdown();
+        } else if (menu_position == LOWER) {
+            set_time();
+        }
+    }
+}
+void menu_escape() {
+
+}
+
 int main(void)
 {
     init();
-    ss_mode = STOP;
+
+    game_state = MENU;
+    void_ptr left_actions[2]   = { &menu_left,   &game_left };
+    void_ptr right_actions[2]  = { &menu_right,  &game_right };
+    void_ptr enter_actions[2]  = { &menu_enter,  &game_enter };
+    void_ptr escape_actions[2] = { &menu_escape, &game_escape };
+
+    menu_state = MAIN;
+    menu_position = 0;
+
+    time_setting = 30;
 
     while(1) {
+        switch (game_state) {
+            case MENU:
+                display_menu();
+                break;
+            case GAME:
+                display_game();
+                break;
+        }
+
         button button_pressed = get_button();
         switch (button_pressed) {
             case LEFT:
-                strcpy(upper_line, "left");
+                (*left_actions[game_state])();
                 break;
             case RIGHT:
-                strcpy(upper_line, "right");
+                (*right_actions[game_state])();
                 break;
             case ENTER:
-                strcpy(upper_line, "enter");
+                (*enter_actions[game_state])();
                 break;
             case ESCAPE:
-                strcpy(upper_line, "escape");
+                (*escape_actions[game_state])();
                 break;
         }
         refresh_7seg();
