@@ -3,6 +3,7 @@
 #include <avr/interrupt.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "HD44780.c"
 
 /*
@@ -20,8 +21,10 @@ typedef enum {UPPER, LOWER} line;
 typedef enum {MENU, GAME} state;
 typedef enum {MAIN, SETTINGS} state_of_menu; // lol
 typedef void (*void_ptr)();
+typedef enum {MARKED, UNMARKED} c_mode;
 
-mode ss_mode = INCREMENT;
+mode ss_mode = STOP;
+mode timer_mode = DECREMENT;
 int counter = 0; // time counter
 uint8_t nums[4] = {9,9,9,9}; // currently displayed number for 7-segment
 uint8_t bvs[10]; // number definitions
@@ -31,6 +34,16 @@ state_of_menu menu_state;
 line menu_position;
 uint8_t time_setting;
 uint8_t button_delay;
+
+char* words[] = {
+    "impossibru", "hakuna", "matata", "trololo"
+};
+uint8_t selected_word = 0;
+char word_buffer[17];
+
+c_mode cursor_mode = UNMARKED;
+uint8_t cursor_pos = 0;
+uint8_t marked_pos = 0;
 
 // text for LCD display
 char upper_line[16] = "hue hue";
@@ -49,8 +62,16 @@ void ss_increment() {
     }
 }
 
+inline uint8_t time_up() {
+    // Don't judge me
+    return (nums[0] ==0 && nums[1] == 0 && nums[2] == 0 && nums[3] == 0);
+}
+
 inline
 void ss_decrement() {
+    if (time_up())
+        return;
+
     uint8_t iter;
     for(iter = 3; iter >= 0; --iter) {
         if (nums[iter] > 0) {
@@ -82,8 +103,7 @@ ISR(TIMER0_COMP_vect) {
     }
 }
 
-inline
-void init()
+inline void init()
 {
 
     DDRA = 0xFF; // LCD
@@ -91,6 +111,7 @@ void init()
 
     DDRB = 0xFF; // 7-segment: choose segment
     DDRD = 0xFF; // 7-segment: choose display, and diodes (4:4)
+    PORTD = 0x00;
 
     DDRC = 0x00; // buttons
     PORTC = 0xFF; // pull-up resistors
@@ -141,6 +162,14 @@ inline void display_num(uint8_t num)
     PORTB = ~bvs[num];
 }
 
+inline void set_nums(uint8_t num)
+{
+    nums[0] = 0;
+    nums[1] = num / 100;
+    nums[2] = num / 10;
+    nums[3] = num % 10;
+}
+
 static inline
 void refresh_7seg() {
     uint8_t iter;
@@ -163,7 +192,10 @@ void refresh_LCD() {
     LCD_GoToXY(0, 1);
     LCD_Text(lower_line);
     /*LCD_Home();*/
-    LCD_GoToXY(0, menu_position);
+    if (game_state == MENU)
+        LCD_GoToXY(0, menu_position);
+    else
+        LCD_GoToXY(20, 20);
 }
 
 inline
@@ -190,28 +222,123 @@ button get_button() {
     return NONE;
 }
 
+void game_over() {
+    set_nums(0);
+    ss_mode = STOP;
+    game_state = MENU;
+}
 
-void display_game() {}
+void game_win() {
+    strcpy(upper_line, "You win");
+    strcpy(lower_line, "   ");
+    refresh_LCD();
+    _delay_ms(5000);
+
+    game_over();
+}
+
+void show_cursor() {
+    if (cursor_mode == MARKED) {
+        for (uint8_t i = 0; i < strlen(word_buffer); ++i) {
+            if (i < marked_pos) {
+                lower_line[i] = ' ';
+            } else if (i == marked_pos) {
+                lower_line[i] = '^';
+            } else {
+                lower_line[i] = 0; // this is NULL
+                return;
+            }
+        }
+    } else {
+        strcpy(lower_line, "            ");
+    }
+}
+
+void display_game() {
+    if (time_up()) {
+        game_over();
+    }
+
+    if (strcmp(words[selected_word], word_buffer) == 0) {
+        game_win();
+    }
+
+    strcpy(upper_line, word_buffer);
+    show_cursor();
+    LCD_GoToXY(cursor_pos, 0);
+}
 
 void game_left() {
-
+    if (cursor_pos > 0) {
+        --cursor_pos;
+    }
 }
 void game_right() {
+    if (cursor_pos < strlen(word_buffer) - 1)
+        ++cursor_pos;
 
 }
 void game_enter() {
-
+    if ( cursor_mode == UNMARKED) {
+        marked_pos = cursor_pos;
+        cursor_mode = MARKED;
+    } else if ( cursor_mode == MARKED) {
+        char temp = word_buffer[cursor_pos];
+        word_buffer[cursor_pos] = word_buffer[marked_pos];
+        word_buffer[marked_pos] = temp;
+        cursor_mode = UNMARKED;
+    }
 }
 void game_escape() {
+    game_over();
+}
 
+uint8_t randint(uint8_t upto) {
+    return (rand() % upto) + 1;
+}
+
+uint8_t random_word() {
+    uint8_t no_of_words = sizeof(words)/sizeof(char*);
+    return randint(no_of_words) - 1;
+}
+
+void permute_string(char* string) {
+    char original[16];
+    strcpy(original, string);
+    while (!strcmp(original, string)) {
+        uint8_t length = strlen(string) - 1;
+        for (uint8_t rep = 0; rep < 20; ++ rep) {
+            uint8_t index1 = randint(length);
+            uint8_t index2 = randint(length);
+
+            char temp = string[index1];
+            string[index1] = string[index2];
+            string[index2] = temp;
+        }
+    }
+}
+
+void game_setup() {
+    set_nums(time_setting);
+    ss_mode = timer_mode;
+
+    selected_word = random_word();
+    strcpy(word_buffer, words[selected_word]);
+
+    permute_string(word_buffer);
+    strcpy(upper_line, word_buffer);
+    strcpy(lower_line, "           ");
+
+    cursor_mode = UNMARKED;
+    cursor_pos = 0;
 }
 
 void set_countdown() {
-    ss_mode = ++ss_mode % 3;
+    timer_mode = ++timer_mode % 3;
 }
 
 void set_time() {
-    time_setting = (time_setting + 10) % 60;
+    time_setting = (time_setting % 60) + 10;
 }
 
 void display_menu() {
@@ -222,7 +349,7 @@ void display_menu() {
             break;
         case SETTINGS:
             /*strcpy(upper_line, " Game mode ");*/
-            switch (ss_mode) {
+            switch (timer_mode) {
                 case STOP:
                     strcpy(upper_line, " Game mode: STOP");
                     break;
@@ -244,6 +371,7 @@ void menu_enter() {
     if (menu_state == MAIN) {
         if (menu_position == UPPER) {
             game_state = GAME;
+            game_setup();
         } else if (menu_position == LOWER) {
             menu_state = SETTINGS;
         }
@@ -255,8 +383,9 @@ void menu_enter() {
         }
     }
 }
-void menu_escape() {
 
+void menu_escape() {
+    menu_state = MAIN;
 }
 
 int main(void)
@@ -272,7 +401,7 @@ int main(void)
     menu_state = MAIN;
     menu_position = 0;
 
-    time_setting = 30;
+    time_setting = 60;
 
     while(1) {
         switch (game_state) {
@@ -287,15 +416,19 @@ int main(void)
         button button_pressed = get_button();
         switch (button_pressed) {
             case LEFT:
+                srand(counter);
                 (*left_actions[game_state])();
                 break;
             case RIGHT:
+                srand(counter);
                 (*right_actions[game_state])();
                 break;
             case ENTER:
+                srand(counter);
                 (*enter_actions[game_state])();
                 break;
             case ESCAPE:
+                srand(counter);
                 (*escape_actions[game_state])();
                 break;
         }
