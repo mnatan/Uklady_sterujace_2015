@@ -247,7 +247,7 @@ void menu_enter() {
         } else if (menu_position == LOWER) {
             menu_state = SETTINGS;
         }
-    } else if (menu_state = SETTINGS) {
+    } else if (menu_state == SETTINGS) {
         if (menu_position == UPPER) {
             set_countdown();
         } else if (menu_position == LOWER) {
