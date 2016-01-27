@@ -33,10 +33,10 @@ state game_state;
 state_of_menu menu_state;
 line menu_position;
 uint8_t time_setting;
-uint8_t button_delay;
+button last_button = NONE;
 
 char* words[] = {
-    "impossibru", "hakuna", "matata", "trololo"
+    "computer", "unit", "test", "boiler", "heaven", "markdown"
 };
 uint8_t selected_word = 0;
 char word_buffer[17];
@@ -97,8 +97,6 @@ ISR(TIMER0_COMP_vect) {
                 break;
         }
     } else {
-        if (!(counter % 400))
-            button_delay = 0;
         ++counter;
     }
 }
@@ -200,26 +198,24 @@ void refresh_LCD() {
 
 inline
 button get_button() {
-    if (button_delay == 1)
-        return NONE;
-
+    button current = NONE;
+    
     if ( ~PINC & (1 << PC0) ) {
-        button_delay = 1;
-        return LEFT;
+        current =  LEFT;
     }
     if ( ~PINC & (1 << PC1) ) {
-        button_delay = 1;
-        return ENTER;
+        current =  ENTER;
     }
     if ( ~PINC & (1 << PC2) ) {
-        button_delay = 1;
-        return RIGHT;
+        current =  RIGHT;
     }
     if ( ~PINC & (1 << PC3) ) {
-        button_delay = 1;
-        return ESCAPE;
+        current =  ESCAPE;
     }
-    return NONE;
+    if (current != last_button){
+        last_button = current;
+        return current;
+    } else return NONE;
 }
 
 void game_over() {
