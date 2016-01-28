@@ -258,20 +258,21 @@ void display_game() {
 void game_left() {
     if (cursor_pos > 0) {
         --cursor_pos;
-    }
     if (cursor_mode == MARKED) {
         char temp = word_buffer[cursor_pos];
         word_buffer[cursor_pos] = word_buffer[cursor_pos+1];
         word_buffer[cursor_pos+1] = temp;
     }
+    }
 }
 void game_right() {
-    if (cursor_pos < strlen(word_buffer) - 1)
+    if (cursor_pos < strlen(word_buffer) - 1){
         ++cursor_pos;
     if (cursor_mode == MARKED) {
         char temp = word_buffer[cursor_pos];
         word_buffer[cursor_pos] = word_buffer[cursor_pos-1];
         word_buffer[cursor_pos-1] = temp;
+    }
     }
 
 }
